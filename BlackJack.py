@@ -81,6 +81,9 @@ class Player():
 	def collect_winnings(self):
 		self.account_value += 2 * self.bet_value
 
+	def return_stake(self):
+		self.account_value += self.bet_value
+
 
 	def add_card_to_hand (self, new_card):
 		 self.new_card_type, self.new_card_value = new_card
@@ -137,6 +140,57 @@ def display_cards(dealer, player):
 
 
 
+def get_initial_inputs():
+	play_game = input("Would you like to play the game (Y or N): ")
+
+	# Any string starting with 'y' or 'Y' will be taken as confirmation to play game
+	# Any other input will be taken as confirmation not to play game
+	if play_game[0].upper() == 'Y' or play_game.upper() == 'YES':
+		# The player wishes to play the game so continue to obtain other inputs
+
+		# Any input will be accepted as the players name
+		player_name = input("Please Enter Your Name: ")
+
+		# Obtain the initial fund value (used for placing bets)
+		while True:
+			try:
+				player_funds = float(input("Please Enter Your Total Funds Value: "))
+			except:
+				print('Invalid entry. Please enter a numeric value')
+				continue
+			else:
+				break
+
+		return (True, player_name, player_funds)
+	else:
+		return (False, "", 0)
+
+
+
+
+def get_player_stake(player):
+
+	while True:
+		try:
+			player_stake = float(input(f"\n{player.player_name}, please enter your stake for this game: "))
+		except:
+			print("!!!! INVALID INPUT !!!!\n")
+			print("Please enter a numeric value")
+		else:
+			if player.place_stake(player_stake):
+				# If stake accepted then break out of loop
+				break
+			else:
+				print(f"You have insufficient funds to place a bet of {player_stake}.")
+				print(f"Your current fund value is {player.account_value}.")
+				print(f"Please try again with stake less than or equal to your Fund value.")
+				print("\n")	
+
+
+
+
+
+
 if __name__ == '__main__':
 	# Display Initial Instructions
 	print('\n'*100)
@@ -153,18 +207,14 @@ if __name__ == '__main__':
 	print("Jacks, Queens and Kings all have a value of 10. Aces will initially have a value of 11 but if a hand exceeds 21,")
 	print("Aces will automatically take a value of 1.\n\n")
 
-	play_game = input("Would you like to play the game (Y or N): ")
 
-	if play_game.upper() == 'Y' or play_game.upper() == 'YES':
-		play_game = True
-		player_name = input("Please Enter Your Name: ")
-		player_funds = float(input("Please Enter Your Total Funds Value: "))
+	play_game, player_name, player_funds = get_initial_inputs()
 
 
-
-	# Create the player and dealer objects from the Player class
-	player = Player(player_name, player_funds)
-	dealer = Player('Dealer', -1)
+	if play_game:
+		# Create the player and dealer objects from the Player class
+		player = Player(player_name, player_funds)
+		dealer = Player('Dealer', -1)
 
 
 	while play_game:
@@ -177,105 +227,64 @@ if __name__ == '__main__':
 		dealer.clear_hands()
 
 
-		while True:
-			player_stake = float(input(f"\n{player.player_name}, please enter your stake for this game: "))
-
-			if player.place_stake(player_stake):
-				# If stake accepted then break out of loop
-				break
-
-			print(f"You have insufficient funds to place a bet of {player_stake}.")
-			print(f"Your current fund value is {player.account_value}.")
-			print(f"Please try again with stake less than or equal to your Fund value.")
-			print("\n")	
+		get_player_stake(player)
 
 
-		# Deal 3 cards to the player and the 1 visible card to the Dealer
-		player_bust = not player.add_card_to_hand(card_deck.deal_card())
-		player_bust = not player.add_card_to_hand(card_deck.deal_card())
-		player_bust = not player.add_card_to_hand(card_deck.deal_card())
+		# Deal 2 cards to the player and the 1 visible card to the Dealer
+		player_continue = player.add_card_to_hand(card_deck.deal_card())
+		player_continue = player.add_card_to_hand(card_deck.deal_card())
 
-		dealer_bust = not dealer.add_card_to_hand(card_deck.deal_card())
+		dealer_continue = dealer.add_card_to_hand(card_deck.deal_card())
 
 		
 		# Indicate the visible cards to the player
 		display_cards(dealer, player)
 
-		if player_bust:
-			print(f"{player.player_name}, you Lost")
-			print(f"You have {player.account_value} remaining in your account.")
+		
 
-			play_again = input("Would you like to play again (Y or N): ")
-
-			if play_again[0].upper() == 'Y':
-				play_game = True
-				continue
-			else:
-				play_game = False
-				break
-
-			
-
-		while True:
-			# Player not Bust so ask to deal
+		while player_continue:
+			# Ask Player if they would like to be delt another card
 			deal_new_card = input(f'{player.player_name} would you like another card (Y or N): ')
 
 			if deal_new_card[0].upper() == 'Y':
-				player_bust = not player.add_card_to_hand(card_deck.deal_card())
+				player_continue = player.add_card_to_hand(card_deck.deal_card())
 				display_cards(dealer, player)
-
-				if player_bust:
-					print(f"{player.player_name}, you Lost")
-					print(f"You have {player.account_value} remaining in your account.")
-
-					play_again = input("Would you like to play again (Y or N): ")
-
-					if play_again[0].upper() == 'Y':
-						play_game = True
-					else:
-						play_game = False
-
-					break
-				else:
-					continue
 			else:
-				# The player has selected to stick
-				while True:
-					# First check that the players hand is greater than the dealers current hand
-					if dealer.hand_value >= player.hand_value:
-						print(f"{player.player_name}, you Lost")
-						print(f"You have {player.account_value} remaining in your account.")
-
-						play_again = input("Would you like to play again (Y or N): ")
-
-						if play_again[0].upper() == 'Y':
-							play_game = True
-						else:
-							play_game = False
-						
-						break
-
+				# The player's go is over. If the player is not bust hand over to the dealer
+				player_continue = False
+				while dealer_continue:
 					# Give the Dealer another card and check if the Dealer is bust
-					dealer_bust = not dealer.add_card_to_hand(card_deck.deal_card())
+					dealer_continue = dealer.add_card_to_hand(card_deck.deal_card())
 					display_cards(dealer, player)
 
-					if dealer_bust:
-						print(f"{player.player_name}, you Won")
-						player.collect_winnings()
-						print(f"You have {player.account_value} remaining in your account.")
-
-						play_again = input("Would you like to play again (Y or N): ")
-
-						if play_again[0].upper() == 'Y':
-							play_game = True
-						else:
-							play_game = False
-						
-						break
-				break
+					if dealer.hand_value >= player.hand_value:
+						dealer_continue = False
 
 
 
+
+
+
+		if player.hand_value <= 21 and (player.hand_value > dealer.hand_value or dealer.hand_value > 21):
+			print(f"{player.player_name}, you Won")
+			player.collect_winnings()
+		elif player.hand_value == dealer.hand_value:
+			print("The Game is a draw")
+			player.return_stake()
+		else:
+			print(f"{player.player_name}, you Lost")
+
+
+
+		print(f"You have {player.account_value} remaining in your account.\n")
+
+		play_again = input("Would you like to play again (Y or N): ")
+
+		if play_again[0].upper() == 'Y':
+			play_game = True
+		else:
+			play_game = False
+		
 
 
 
